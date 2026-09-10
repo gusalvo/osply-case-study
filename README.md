@@ -1,3 +1,5 @@
+*[English version](README.en.md)*
+
 # Osply — case study tecnico
 
 **Scheda ospite digitale per strutture ricettive.** Un host crea la guida della propria
