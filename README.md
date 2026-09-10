@@ -34,9 +34,9 @@ deployato da solo, dal dominio vuoto alla produzione.
 | **Arco temporale** | giugno → settembre 2026, due milestone (v1.0, v1.1) |
 | **Stato** | in produzione su VPS, dominio proprio, HTTPS |
 
-Il repository privato contiene altri 145 commit `docs`: sono artefatti di pianificazione
-(requisiti, piani di fase, verifiche). Li tengo fuori dal conteggio perché non sono codice —
-ma sono il motivo per cui i commit di codice sono piccoli e ordinati.
+Il repository privato contiene altri 145 commit `docs`: il resto sono note di progettazione.
+Li tengo fuori dal conteggio perché non sono codice — ma sono il motivo per cui i commit di
+codice sono piccoli e ordinati.
 
 ---
 
@@ -76,7 +76,8 @@ con un filo di JavaScript vanilla — **non carica né Livewire né Alpine**, pe
 che deve aprirsi in fretta sulla connessione mobile di un ospite appena arrivato.
 
 Dettagli: **[docs/architettura.md](docs/architettura.md)** ·
-Scelte e trade-off: **[docs/decisioni-tecniche.md](docs/decisioni-tecniche.md)**
+Scelte e trade-off: **[docs/decisioni-tecniche.md](docs/decisioni-tecniche.md)** ·
+Il codice di tutti i giorni: **[docs/crud-pattern.md](docs/crud-pattern.md)**
 
 ---
 

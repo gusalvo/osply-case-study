@@ -34,9 +34,9 @@ solo, from an empty domain to production.
 | **Timeline** | June → September 2026, two milestones (v1.0, v1.1) |
 | **Status** | running in production on a VPS, own domain, HTTPS |
 
-The private repository holds another 145 `docs` commits — planning artifacts: requirements,
-phase plans, verification notes. I leave them out of the count because they are not code, but
-they are the reason the code commits are small and tidy.
+The private repository holds another 145 `docs` commits: the rest are design notes. I leave
+them out of the count because they are not code, but they are the reason the code commits are
+small and tidy.
 
 ---
 
@@ -77,8 +77,9 @@ with a small amount of vanilla JavaScript — **it loads neither Livewire nor Al
 it is the page that has to open fast on the mobile connection of a guest who has just arrived.
 
 Details: **[docs/architettura.md](docs/architettura.md)** ·
-Decisions and trade-offs: **[docs/decisioni-tecniche.md](docs/decisioni-tecniche.md)**
-*(both in Italian)*
+Decisions and trade-offs: **[docs/decisioni-tecniche.md](docs/decisioni-tecniche.md)** ·
+Everyday code: **[docs/crud-pattern.md](docs/crud-pattern.md)**
+*(all three in Italian)*
 
 ---
 
