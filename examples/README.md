@@ -25,9 +25,9 @@ attraverso tutti i suoi livelli:
 |---|---|---|
 | [`database/migrations/…create_local_recommendations_table.php`](database/migrations/2026_06_21_000003_create_local_recommendations_table.php) | 31 | schema della tabella |
 | [`app/Models/LocalRecommendation.php`](app/Models/LocalRecommendation.php) | 74 | modello, relazione, insieme chiuso delle categorie |
-| [`app/Policies/PropertyPolicy.php`](app/Policies/PropertyPolicy.php) | 51 | autorizzazione, con bypass admin in `before()` |
-| [`app/Livewire/Properties/LocalRecommendationManager.php`](app/Livewire/Properties/LocalRecommendationManager.php) | 241 | componente Livewire: CRUD, attivazione, riordino |
-| [`tests/Feature/LocalRecommendationTest.php`](tests/Feature/LocalRecommendationTest.php) | 263 | copertura della funzionalità, comprese le autorizzazioni |
+| [`app/Policies/PropertyPolicy.php`](app/Policies/PropertyPolicy.php) | 49 | autorizzazione, con bypass admin in `before()` |
+| [`app/Livewire/Properties/LocalRecommendationManager.php`](app/Livewire/Properties/LocalRecommendationManager.php) | 229 | componente Livewire: CRUD, attivazione, riordino |
+| [`tests/Feature/LocalRecommendationTest.php`](tests/Feature/LocalRecommendationTest.php) | 254 | copertura della funzionalità, comprese le autorizzazioni |
 
 Il commento sulla struttura del componente è nella sua intestazione. La spiegazione discorsiva,
 con il ragionamento sulle scelte, è in [Come è scritto un CRUD](../docs/crud-pattern.md).
