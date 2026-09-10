@@ -27,9 +27,9 @@ per i contenuti essenziali.
 Il lato host è l'opposto: form ricchi, modali, riordino drag-and-drop, validazione reattiva —
 tutto quello per cui Livewire è la scelta giusta.
 
-| Dashboard host — consigli locali | Form pubblico richiesta info |
+| Dashboard host — consigli locali | Dashboard host — scheda struttura |
 |---|---|
-| ![Modale consigli](img/consigli-modal.png) | ![Form lead](img/form.png) |
+| ![Modale consigli](img/consigli-modal.png) | ![Form struttura](img/form.png) |
 
 La dashboard resta volutamente sobria. L'80% della cura estetica è andato sulla pagina ospite,
 perché è quella che vede il cliente del cliente.
