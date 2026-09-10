@@ -40,13 +40,16 @@ ma sono il motivo per cui i commit di codice sono piccoli e ordinati.
 
 ## Il prodotto in tre schermate
 
-| Scheda ospite | Sezioni protette | Form richiesta info |
+| Scheda ospite | Contenuti protetti | Emergenze, check-out, WhatsApp |
 |---|---|---|
-| ![Scheda ospite](docs/img/01-guest-full.png) | ![Contenuti protetti](docs/img/02-guest-full.png) | ![Form lead](docs/img/form.png) |
+| ![Scheda ospite](docs/img/01-guest-full.png) | ![Contenuti protetti](docs/img/02-guest-full.png) | ![Fondo scheda](docs/img/03-guest-full.png) |
 
 L'ospite non ha account, non fa login, non lascia dati. Apre un link e legge. I contenuti
 sensibili — codice del portone, password WiFi — stanno dietro un PIN che l'host comunica
 separatamente.
+
+Il pulsante WhatsApp è l'unico canale di contatto diretto, e apre la chat con un messaggio
+già scritto che identifica la struttura — così l'host sa subito chi sta scrivendo e da dove.
 
 ---
 
