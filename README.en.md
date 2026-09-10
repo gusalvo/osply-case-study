@@ -70,7 +70,7 @@ cache driver, production used `database`.
 The controller was caching an Eloquent Collection directly. With the database driver the value
 is serialized, and on the next read it no longer behaved as expected.
 
-The fix was to cache only the data actually needed, as a plain array:
+The fix was to cache only the data needed, as a plain array:
 
 ```php
 $properties = Cache::remember('sitemap_v2', 3600, fn () =>
@@ -123,7 +123,7 @@ $recommendation = $this->property->localRecommendations()->findOrFail($id);
 ```
 
 Authorization first, then loading through the already-scoped relation. An identifier belonging
-to another property is simply not found, with no need for additional checks. The details, with
+to another property is not found, with no need for additional checks. The details, with
 the relevant tests, are in [How a CRUD is written here](docs/crud-pattern.md).
 
 ### 4. Normalising WhatsApp numbers
