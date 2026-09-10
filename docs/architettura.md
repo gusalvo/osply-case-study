@@ -1,38 +1,32 @@
 # Architettura
 
-Torna al [case study](../README.md).
+Torna al [README](../README.md).
 
 ---
 
-## Il principio che regge tutto
+## Due utenti, due stack frontend
 
-Osply ha due tipi di utente con esigenze opposte:
+Osply ha due tipi di utente con esigenze diverse.
 
-- **L'ospite** apre un link una volta sola, da mobile, spesso su rete cellulare, spesso mentre
-  è fermo davanti a un portone. Deve leggere subito.
-- **L'host** lavora sulla propria scheda da desktop, con calma, e ha bisogno di form ricchi e
-  reattivi.
+L'ospite apre la scheda una volta sola, da smartphone, spesso su rete cellulare. L'host lavora
+sulla propria scheda da desktop e ha bisogno di form articolati e reattivi.
 
-Da qui la scelta strutturale: **la pagina pubblica e la dashboard non condividono lo stack
-frontend.** La dashboard è Livewire 4. La pagina pubblica è Blade puro con JavaScript vanilla —
-non carica Livewire, non carica Alpine.
+Per questo la pagina pubblica e la dashboard non condividono lo stack frontend. La dashboard usa
+Livewire 4. La pagina pubblica è Blade con JavaScript vanilla e non carica né Livewire né
+Alpine: `/g/{slug}` risponde in circa 0,3 secondi con un payload ridotto.
 
-Non è una micro-ottimizzazione: è la ragione per cui `/g/{slug}` risponde in ~0,3s con un
-payload minimo, mentre la dashboard può permettersi il peso di un framework reattivo.
+L'interattività della pagina pubblica — accordion, chip di accesso rapido, tracking dei click —
+è scritta direttamente in un file JS, con un fallback `<noscript>` per i contenuti essenziali.
 
-La conseguenza operativa è che l'interattività della pagina pubblica (accordion, chip di
-accesso rapido, tracking dei click) è scritta a mano in un file JS, con un fallback `<noscript>`
-per i contenuti essenziali.
-
-Il lato host è l'opposto: form ricchi, modali, riordino drag-and-drop, validazione reattiva —
-tutto quello per cui Livewire è la scelta giusta.
+Sul lato host valgono le esigenze opposte: form, modali, riordino drag-and-drop e validazione
+reattiva.
 
 | Dashboard host — consigli locali | Dashboard host — scheda struttura |
 |---|---|
 | ![Modale consigli](img/consigli-modal.png) | ![Form struttura](img/form.png) |
 
-La dashboard resta volutamente sobria. L'80% della cura estetica è andato sulla pagina ospite,
-perché è quella che vede il cliente del cliente.
+La cura estetica è concentrata sulla pagina ospite, che è la parte del prodotto vista dagli
+utenti finali. La dashboard è volutamente più essenziale.
 
 ---
 
@@ -53,9 +47,8 @@ perché è quella che vede il cliente del cliente.
 | Test | Pest 4 |
 | Qualità | Pint, Larastan, GitHub Actions |
 
-Nessun pacchetto di permessi, nessun admin panel, nessuna SPA. Due ruoli (`admin`, `owner`)
-sono una colonna stringa e un `before()` nella Policy — un pacchetto qui sarebbe stato peso
-senza beneficio.
+Non ho usato pacchetti per la gestione dei permessi. I ruoli previsti sono due (`admin` e
+`owner`) e sono gestiti con una colonna stringa e un metodo `before()` nella Policy.
 
 ---
 
@@ -69,9 +62,9 @@ User ──< Property ──< GuideSection
                   └──< LeadRequest        (richieste info dalla vetrina)
 ```
 
-### `properties` — il cuore
+### `properties`
 
-Una struttura porta con sé identità, contatti, branding e stato di pubblicazione:
+Contiene identità, contatti, personalizzazione e stato di pubblicazione della struttura:
 
 ```php
 $table->foreignId('user_id')->constrained()->cascadeOnDelete();
@@ -85,12 +78,11 @@ $table->string('status', 20)->default('draft'); // draft | published | disabled
 $table->timestamp('published_at')->nullable();
 ```
 
-Il `brand_color` è un dettaglio con una conseguenza tecnica: passa da un accessor
-`getSafeBrandColorAttribute()` che valida il valore prima di iniettarlo in una CSS custom
-property. Un colore arbitrario finito in un attributo `style` è una superficie di injection,
-quindi non arriva mai grezzo alla view.
+Il valore di `brand_color` passa dall'accessor `getSafeBrandColorAttribute()`, che lo valida
+prima dell'inserimento in una CSS custom property. Un colore non validato in un attributo
+`style` costituirebbe una possibile superficie di injection.
 
-Il tema per-struttura si regge su tre variabili derivate a runtime:
+Il tema per struttura si basa su tre variabili derivate a runtime:
 
 ```php
 $accentVars = "--brand: {$property->safe_brand_color};"
@@ -98,28 +90,28 @@ $accentVars = "--brand: {$property->safe_brand_color};"
     ." --brand-l: color-mix(in srgb, var(--brand) 12%, #fff);";
 ```
 
-e la classe `.guest` mappa quel trio sui token semantici usati dalle partial, così la stessa
-scheda si rende identica nella pagina pubblica e nell'anteprima dell'host.
+La classe `.guest` mappa queste tre variabili sui token usati dalle partial, così la scheda
+viene resa allo stesso modo nella pagina pubblica e nell'anteprima dell'host.
 
-### `guide_sections` — contenuto misto
+### `guide_sections`
 
-Le sezioni hanno sia `content` (testo libero) sia `content_json` (strutturato). WiFi, check-in,
-check-out ed emergenze usano il secondo: sono dati con una forma, non paragrafi, e vanno resi
-con partial dedicate (`section-content-wifi`, `section-content-checkin`, …).
+Le sezioni dispongono sia di un campo `content` (testo libero) sia di `content_json`
+(strutturato). WiFi, check-in, check-out ed emergenze usano il secondo, perché sono dati con una
+forma definita, e vengono resi da partial dedicate (`section-content-wifi`,
+`section-content-checkin`, e così via).
 
-Ogni sezione ha `sort_order`, `is_active` e `is_protected`: attivabile, riordinabile e
-proteggibile in modo indipendente.
+Ogni sezione ha `sort_order`, `is_active` e `is_protected`, quindi può essere riordinata,
+disattivata e protetta in modo indipendente dalle altre.
 
-### `guide_views` — analytics che non profila
+### `guide_views`
 
 ```php
 $table->string('event_type', 20);           // view | whatsapp_click | maps_click | pin_unlock
 $table->string('ip_hash', 64)->nullable();  // hash, mai l'IP in chiaro
 ```
 
-Nessun identificatore persistente dell'ospite. L'host vede quante visite, quanti click
-WhatsApp e la data dell'ultima visita — abbastanza per sapere se la scheda serve, troppo poco
-per riconoscere una persona.
+Non viene memorizzato alcun identificatore persistente dell'ospite. L'host vede il numero di
+visite, i click su WhatsApp e la data dell'ultima visita.
 
 ---
 
@@ -141,8 +133,8 @@ GET   /robots.txt
 GET   /privacy
 ```
 
-Il model binding è su slug (`{property:slug}`), non su id: le URL pubbliche non espongono
-progressivi numerici.
+Il model binding avviene su slug (`{property:slug}`) e non su id, così le URL pubbliche non
+espongono identificativi progressivi.
 
 ### Area host — `auth` + `verified`
 
@@ -166,7 +158,7 @@ Le rotte Livewire usano `Route::livewire()`, la forma introdotta da Livewire 4.
 
 ## Autorizzazione
 
-Policy Laravel, auto-discovery per convenzione, con bypass admin nel gancio `before()`:
+Policy Laravel, con auto-discovery per convenzione e bypass admin nel metodo `before()`:
 
 ```php
 public function before(User $user, string $ability): bool|null
@@ -175,7 +167,7 @@ public function before(User $user, string $ability): bool|null
         return true;
     }
 
-    return null;   // gli owner cadono nei check per-metodo
+    return null;   // gli owner passano ai controlli per-metodo
 }
 
 public function view(User $user, Property $property): bool
@@ -184,35 +176,31 @@ public function view(User $user, Property $property): bool
 }
 ```
 
-Il punto che conta è **dove** viene chiamata: nel `mount()` dei componenti Livewire, prima di
-caricare qualunque dato. Un owner che tenta di aprire la struttura di un altro prende 403
-all'ingresso, non dopo che i dati sono già stati letti dal database. La suite copre questo caso
-esplicitamente per anteprima, sezioni, consigli e inbox.
+La Policy viene richiamata nel `mount()` dei componenti Livewire, prima del caricamento dei
+dati: un owner che tenta di aprire la struttura di un altro riceve 403 all'ingresso. La suite
+copre questo caso per anteprima, sezioni, consigli e inbox.
+
+Lo schema completo, con i metodi di scrittura e i relativi test, è in
+[Come è scritto un CRUD](crud-pattern.md).
 
 ---
 
 ## Performance
 
-- **Eager loading** delle sezioni e dei consigli sulla scheda pubblica: la pagina è un
-  `Property` con le sue relazioni, non N+1 query per sezione.
-- **Query selettive** dove serve solo una proiezione — la sitemap legge `select(['slug',
-  'updated_at'])`, non i modelli interi.
-- **Cache** della sitemap con TTL di un'ora e chiave versionata (vedi il caso raccontato nel
-  [README](../README.md#1-un-bug-che-esisteva-solo-in-produzione-e-perché-la-suite-non-poteva-vederlo)).
-- **Nessun framework JS** sulla pagina pubblica.
-- **Icone come sprite SVG inline**, non come richieste separate.
+* Eager loading di sezioni e consigli sulla scheda pubblica, per evitare query N+1.
+* Query con proiezione dove serve: la sitemap legge `select(['slug', 'updated_at'])`.
+* Cache della sitemap con TTL di un'ora e chiave versionata, descritta nel
+  [README](../README.md#1-cache-della-sitemap-un-problema-emerso-in-produzione).
+* Nessun framework JavaScript sulla pagina pubblica.
+* Icone come sprite SVG inline, senza richieste aggiuntive.
 
 ---
 
 ## Deploy
 
-VPS con pannello, ambiente chroot, layout separato tra la root applicativa e la document root
-pubblica. Il deploy è git-based con build degli asset e `storage:link`.
+VPS con pannello, ambiente chroot e separazione tra root applicativa e document root pubblica.
+Il deploy è git-based, con build degli asset e `storage:link`.
 
-Il vincolo che ha più influenzato il codice: **la CLI PHP non è disponibile via SSH** in
-quell'ambiente. Niente `php artisan cache:clear` al deploy. Da qui la scelta di versionare la
-chiave di cache quando cambia la forma del payload, invece di affidarsi a uno svuotamento
-manuale che non si può eseguire.
-
-È il genere di vincolo che non si trova nella documentazione del framework e che decide come
-scrivi il codice.
+Su questo ambiente la CLI PHP non è disponibile via SSH, quindi non è possibile eseguire
+`php artisan cache:clear` al deploy. Per questo la chiave di cache viene versionata quando
+cambia la struttura dei dati memorizzati.

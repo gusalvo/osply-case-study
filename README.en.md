@@ -38,9 +38,6 @@ I handled design, development, testing and deployment directly.
 | Period | June – September 2026, two milestones |
 | Status | running in production on a VPS, own domain, HTTPS |
 
-The private repository holds another 145 `docs` commits: the rest are design notes. I leave
-them out of the count because they are not code.
-
 ---
 
 ## The guest guide

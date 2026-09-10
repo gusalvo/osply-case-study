@@ -39,9 +39,6 @@ Ho seguito direttamente progettazione, sviluppo, test e messa in produzione.
 | Periodo | giugno – settembre 2026, due milestone |
 | Stato | in produzione su VPS, dominio proprio, HTTPS |
 
-Il repository privato contiene altri 145 commit `docs`: il resto sono note di progettazione.
-Li tengo fuori dal conteggio perché non sono codice.
-
 ---
 
 ## La scheda ospite

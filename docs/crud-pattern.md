@@ -1,38 +1,35 @@
 # Come è scritto un CRUD in questo progetto
 
-Torna al [case study](../README.md).
+Torna al [README](../README.md).
 
 ---
 
-Le pagine di gestione della dashboard — sezioni, consigli locali, foto, inbox — sono tutte
-componenti Livewire full-page con la stessa forma. Questo documento ne apre una,
-`LocalRecommendationManager` (241 righe: CRUD completo, attivazione inline e riordino
-drag-and-drop), per mostrare la regola che le attraversa tutte.
+Le pagine di gestione della dashboard — sezioni, consigli locali, foto, richieste — sono
+componenti Livewire full-page con la stessa struttura.
 
-Non è il codice più brillante del progetto. È il codice più **ripetuto**, ed è per questo che
-vale la pena guardarlo: se la regola regge qui, regge ovunque.
+Questo documento apre `LocalRecommendationManager` (241 righe: CRUD completo, attivazione
+inline e riordino drag-and-drop) per mostrare lo schema che seguono tutte.
 
 ---
 
-## L'invariante
+## Autorizzazione e caricamento
 
-Ogni metodo che tocca il database fa due cose, in quest'ordine, senza eccezioni:
+Ogni metodo che scrive sul database esegue due operazioni, in quest'ordine:
 
 ```php
 $this->authorize('update', $this->property);
 $recommendation = $this->property->localRecommendations()->findOrFail($id);
 ```
 
-**Prima autorizza. Poi carica attraverso la relazione, mai dal modello globale.**
+Prima l'autorizzazione sulla struttura, poi il caricamento attraverso la relazione.
 
-Non compare da nessuna parte un `LocalRecommendation::find($id)`. La differenza sembra
-stilistica e non lo è: caricando dalla relazione, un id che appartiene a un'altra struttura non
-viene trovato affatto. Non serve un controllo aggiuntivo che confronti `property_id` — e non
-serve ricordarsi di scriverlo. Il perimetro è la query.
+Nel componente non compare mai `LocalRecommendation::find($id)`. Caricando dalla relazione, un
+identificativo appartenente a un'altra struttura non viene trovato e la richiesta termina con
+un `ModelNotFoundException`. Non è quindi necessario un confronto esplicito su `property_id`.
 
 ---
 
-## L'ingresso
+## Mount
 
 ```php
 public function mount(Property $property): void
@@ -42,12 +39,12 @@ public function mount(Property $property): void
 }
 ```
 
-La struttura arriva per route model binding. L'autorizzazione è la **prima riga**, prima di
-qualunque assegnazione: chi non ha i permessi non arriva a caricare nulla.
+La struttura arriva per route model binding. L'autorizzazione precede l'assegnazione della
+proprietà.
 
 ---
 
-## Scrittura: validare, poi costruire dal validato
+## Salvataggio
 
 ```php
 public function saveRecommendation(): void
@@ -97,26 +94,23 @@ public function saveRecommendation(): void
 }
 ```
 
-Tre dettagli che non sono casuali.
+Alcune note sulla validazione.
 
-**La categoria è validata su un insieme chiuso**, costruito dalla costante del modello. Le
-categorie non sono una stringa libera né un elenco duplicato nel componente: se se ne aggiunge
-una, si aggiunge in un posto solo e la validazione la segue.
+La categoria è validata su un insieme chiuso costruito da `LocalRecommendation::CATEGORIES`.
+L'elenco è definito una sola volta nel modello e la regola lo segue.
 
-**`maps_url` richiede `starts_with:https://`**, non solo `url`. Un URL valido può essere
-`javascript:`, e quel valore finisce in un `href` che l'ospite clicca dal telefono.
+Su `maps_url` uso `starts_with:https://` oltre a `url`. La regola `url` accetterebbe anche
+schemi come `javascript:`, e il valore finisce in un attributo `href` della pagina pubblica.
 
-**`$data` è costruito da `$validated`, mai dalle proprietà pubbliche del componente.** In
-Livewire le proprietà pubbliche sono scrivibili dal client: leggere `$this->editName` invece di
-`$validated['editName']` significa fidarsi di un valore che non è passato dalle regole. La
-differenza è di due caratteri e cambia il modello di fiducia.
+I dati salvati vengono costruiti da `$validated` e non dalle proprietà pubbliche del
+componente, che in Livewire sono scrivibili dal client.
 
-Il campo `sort_order` in creazione parte da `max('sort_order') + 1` sulla relazione già filtrata:
-il nuovo consiglio finisce in fondo alla lista di *quella* struttura.
+In creazione, `sort_order` parte da `max('sort_order') + 1` calcolato sulla relazione, quindi
+sui soli consigli di quella struttura.
 
 ---
 
-## Cancellazione
+## Eliminazione
 
 ```php
 public function deleteRecommendation(int $id): void
@@ -129,23 +123,22 @@ public function deleteRecommendation(int $id): void
 }
 ```
 
-Tre righe, e sono le stesse tre di sempre. La noia è il punto.
+Stesso schema dei metodi precedenti.
 
 ---
 
-## Riordino: l'unica parte non banale
+## Riordino
 
-Il drag-and-drop chiama il metodo con l'id spostato e la nuova posizione (1-based). Ricostruire
-l'ordine sembra semplice finché non ci si accorge che spostare un elemento cambia la posizione
-di tutti gli altri.
+Il drag-and-drop richiama il metodo passando l'identificativo dell'elemento spostato e la nuova
+posizione, in base 1.
 
 ```php
 public function updateRecommendationsOrder(int $id, int $position): void
 {
     $this->authorize('update', $this->property);
 
-    // Sempre ordinare per sort_order prima di ricostruire: l'ordine di ritorno
-    // del database non è garantito, e senza questo il riordino è instabile.
+    // L'ordine restituito dal database non è garantito: serve un orderBy esplicito
+    // prima di ricostruire la sequenza.
     $recommendations = $this->property->localRecommendations()->orderBy('sort_order')->get();
 
     // L'elemento spostato deve appartenere a questa struttura.
@@ -154,7 +147,6 @@ public function updateRecommendationsOrder(int $id, int $position): void
         return;
     }
 
-    // Rimuovi l'elemento e reinseriscilo alla nuova posizione.
     $reordered = $recommendations->reject(fn ($r) => $r->id === $id)->values();
 
     $insertAt = max(0, $position - 1);
@@ -163,29 +155,28 @@ public function updateRecommendationsOrder(int $id, int $position): void
 
     $final = $before->push($moved)->merge($after)->values();
 
-    // Riscrivi sort_order come 1..N: nessun buco, nessun duplicato.
     foreach ($final as $index => $recommendation) {
         $recommendation->update(['sort_order' => $index + 1]);
     }
 }
 ```
 
-Due scelte da difendere.
+Riscrivo l'intera sequenza da 1 a N invece di aggiornare solo le righe comprese tra la vecchia e
+la nuova posizione. Su liste di poche decine di elementi la differenza di costo è trascurabile,
+e l'ordinamento resta senza valori duplicati o mancanti.
 
-**Riscrivo l'intera sequenza `1..N` invece di aggiornare solo le righe fra la vecchia e la nuova
-posizione.** È più lavoro per il database, ma l'alternativa produce buchi e duplicati che poi
-vanno gestiti in lettura. Su liste di questa dimensione — una manciata di consigli per struttura
-— la sequenza pulita vale più della scrittura risparmiata.
-
-**Se `$moved` non c'è, esco in silenzio.** L'id arriva dal client: se non appartiene a questa
-struttura, la richiesta non è un errore da mostrare all'utente, è un tentativo da ignorare.
+Se l'elemento non appartiene alla struttura corrente il metodo esce senza modificare nulla e
+senza segnalare errore, dato che l'identificativo proviene dal client.
 
 ---
 
-## Il test che tiene in piedi tutto questo
+## Test sulle autorizzazioni
 
-L'invariante vale quanto la prova che lo difende. Questo test è la più interessante della serie,
-perché non verifica il caso ovvio:
+Il caso di un utente che apre la struttura di un altro è coperto separatamente e restituisce
+403 al `mount()`.
+
+Questo test copre invece un utente autorizzato sulla propria struttura che passa
+l'identificativo di un consiglio appartenente a un'altra:
 
 ```php
 test('non-owner cannot edit a recommendation on another owner\'s property', function () {
@@ -201,8 +192,6 @@ test('non-owner cannot edit a recommendation on another owner\'s property', func
         'is_active'  => true,
     ]);
 
-    // ownerB monta il componente sulla PROPRIA struttura — è perfettamente autorizzato —
-    // ma passa l'id di un consiglio di ownerA. La query scoped non lo trova.
     expect(fn () =>
         Livewire::actingAs($ownerB)
             ->test(LocalRecommendationManager::class, ['property' => $propertyB])
@@ -211,23 +200,19 @@ test('non-owner cannot edit a recommendation on another owner\'s property', func
 });
 ```
 
-Il caso ovvio — un utente che apre la struttura di un altro — è coperto altrove e prende 403 al
-`mount()`. Questo copre quello **subdolo**: un utente legittimo, sulla propria pagina, con un id
-altrui. Lì il controllo di autorizzazione passa, perché la struttura è davvero sua. L'unica cosa
-che lo ferma è che la query è scoped.
-
-E infatti non ottiene un 403 ma un `ModelNotFoundException`, cioè un 404: **quella riga, per lui,
-non esiste.** È la risposta giusta — un 403 confermerebbe che l'id esiste da qualche parte.
+Il controllo di autorizzazione passa, perché la struttura appartiene effettivamente a `ownerB`.
+La query sulla relazione non trova il consiglio e il risultato è un `ModelNotFoundException`,
+quindi un 404 anziché un 403: la risorsa non viene confermata come esistente.
 
 ---
 
-## In sintesi
+## Riepilogo
 
-| Aspetto | Scelta |
+| Aspetto | Implementazione |
 |---|---|
-| Autorizzazione | prima riga di ogni metodo, anche di quelli che sembrano innocui |
-| Caricamento | sempre dalla relazione, mai dal modello globale |
+| Autorizzazione | prima istruzione di ogni metodo che scrive |
+| Caricamento | tramite la relazione, mai dal modello globale |
 | Validazione | insiemi chiusi dalle costanti del modello, `starts_with:https://` sugli URL |
-| Persistenza | dati costruiti da `validated()`, mai dalle proprietà pubbliche |
-| Ordinamento | sequenza riscritta `1..N`, nessun buco |
-| Copertura | il test punta al caso ambiguo, non a quello evidente |
+| Persistenza | dati costruiti da `validated()` |
+| Ordinamento | sequenza riscritta da 1 a N |
+| Test | copertura del caso con identificativo appartenente a un'altra struttura |
