@@ -80,7 +80,6 @@ class LocalRecommendationManager extends Component
     {
         $this->authorize('update', $this->property);
 
-        // Load all recommendations for this property ordered by current sort_order.
         $recommendations = $this->property->localRecommendations()->orderBy('sort_order')->get();
 
         // The moved item must belong to this property.
@@ -89,7 +88,6 @@ class LocalRecommendationManager extends Component
             return;
         }
 
-        // Remove the moved item from the collection and reinsert at the new position.
         $reordered = $recommendations->reject(fn ($r) => $r->id === $id)->values();
 
         // $position is 1-based; insert before the item currently at that index.
@@ -99,7 +97,6 @@ class LocalRecommendationManager extends Component
 
         $final = $before->push($moved)->merge($after)->values();
 
-        // Persist new sort_order (1..N) for all recommendations in a single loop.
         foreach ($final as $index => $recommendation) {
             $recommendation->update(['sort_order' => $index + 1]);
         }
@@ -135,7 +132,6 @@ class LocalRecommendationManager extends Component
         // Reset form first (avoid stale state)
         $this->openCreate();
 
-        // Override: set editing state from existing recommendation
         $this->editingId       = $recommendation->id;
         $this->editCategory    = $recommendation->category;
         $this->editName        = $recommendation->name;

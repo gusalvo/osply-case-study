@@ -241,7 +241,6 @@ describe('validazione', function () {
         $rec2 = $property->localRecommendations()->create(['category' => 'bar', 'name' => 'Secondo', 'sort_order' => 2, 'is_active' => true]);
         $rec3 = $property->localRecommendations()->create(['category' => 'pharmacy', 'name' => 'Terzo', 'sort_order' => 3, 'is_active' => true]);
 
-        // Move rec3 to position 1
         Livewire::actingAs($owner)
             ->test(LocalRecommendationManager::class, ['property' => $property])
             ->call('updateRecommendationsOrder', $rec3->id, 1);

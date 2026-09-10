@@ -7,7 +7,7 @@ Torna al [README](../README.md).
 Le pagine di gestione della dashboard — sezioni, consigli locali, foto, richieste — sono
 componenti Livewire full-page con la stessa struttura.
 
-Questo documento apre `LocalRecommendationManager` (229 righe: CRUD completo, attivazione
+Questo documento apre `LocalRecommendationManager` (225 righe: CRUD completo, attivazione
 inline e riordino drag-and-drop) per mostrare lo schema che seguono tutte.
 
 I file sorgente citati qui sono consultabili in [`examples/`](../examples/).
