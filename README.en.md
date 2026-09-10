@@ -1,282 +1,194 @@
 *[Versione italiana](README.md)*
 
-# Osply — technical case study
+# Osply
 
-**A digital guest guide for small hospitality businesses.** A host builds the guide for their
-property — check-in, WiFi, house rules, emergencies, check-out, local recommendations — and
-shares it with guests through a single link, a QR code, or WhatsApp.
+A digital guest guide for hospitality businesses.
 
-🔗 **Live:** [osply.app](https://osply.app) · **Demo guide:** [osply.app/g/casa-azzurra-palermo](https://osply.app/g/casa-azzurra-palermo)
+Osply lets a host gather everything a guest needs during their stay on a single page: check-in,
+WiFi, house rules, emergencies, check-out and local recommendations.
 
-> Open it on your phone. The guest page is the product, and it was designed mobile-first.
+The guide is shared through a link, a QR code or WhatsApp, and is designed primarily for use on
+a smartphone.
 
----
+🔗 **Live:** [osply.app](https://osply.app)
 
-> **What this repository is.** It is not the Osply source code. It is a technical write-up of
-> how I designed and built it, with excerpts of the real code as evidence. The full codebase
-> is private — see [License](#license). If you are evaluating my profile and want to see the
-> source, just ask: I am happy to walk through it on a screen share, or give you read access
-> to the private repository.
+🔗 **Demo guide:** [osply.app/g/casa-azzurra-palermo](https://osply.app/g/casa-azzurra-palermo)
 
 ---
 
-## At a glance
+> **What this repository contains.** It is not the Osply source code, but a technical
+> description of how I designed and built it, with a few code excerpts in support. The full
+> codebase is private. If you are evaluating my profile and would like to see it, I am happy to
+> walk through it on a screen share or to give you read access to the private repository.
 
-Laravel 13, PHP 8.3, Livewire 4, Tailwind 4, MySQL. Designed, written, tested and deployed
-solo, from an empty domain to production.
+---
+
+## Overview
+
+**Laravel 13 · PHP 8.3 · Livewire 4 · Tailwind 4 · MySQL**
+
+I handled design, development, testing and deployment directly.
 
 | | |
 |---|---|
-| **Code commits** | 117 — 63 `feat`, 27 `test`, 15 `fix`, 6 `chore`, 1 `refactor`, 5 UI restyle |
-| **Tests** | 250 (Pest) — 246 passing, 4 skipped, 0 failing |
-| **Application PHP classes** | 36 |
-| **Blade views** | 77 |
-| **Timeline** | June → September 2026, two milestones (v1.0, v1.1) |
-| **Status** | running in production on a VPS, own domain, HTTPS |
+| Code commits | 117 |
+| Tests | 250 (Pest) — 246 passing, 4 skipped |
+| Application PHP classes | 36 |
+| Blade views | 77 |
+| Period | June – September 2026, two milestones |
+| Status | running in production on a VPS, own domain, HTTPS |
 
 The private repository holds another 145 `docs` commits: the rest are design notes. I leave
-them out of the count because they are not code, but they are the reason the code commits are
-small and tidy.
+them out of the count because they are not code.
 
 ---
 
-## The product, in three screens
+## The guest guide
 
-| Guest guide | Protected content | Emergencies, check-out, WhatsApp |
+| Guide sections | Protected content | Emergencies and host contact |
 |---|---|---|
 | ![Guest guide](docs/img/01-guest-full.png) | ![Protected content](docs/img/02-guest-full.png) | ![Bottom of the guide](docs/img/03-guest-full.png) |
 
-Guests have no account, no login, and leave no data behind. They open a link and read.
-Sensitive content — door codes, WiFi passwords — sits behind a PIN that the host shares
-through a separate channel.
+---
 
-The WhatsApp button is the only direct contact route, and it opens the chat with a message
-already written that identifies the property, so the host knows immediately who is writing
-and from where.
+## Technical documentation
+
+* [Architecture](docs/architettura.md) — stack, data model, routes, authorization, deployment
+* [Technical decisions](docs/decisioni-tecniche.md) — choices, alternatives considered, one mistake
+* [How a CRUD is written here](docs/crud-pattern.md) — everyday code, with its tests
+
+*(the three documents are in Italian)*
 
 ---
 
-## Architecture on one page
+## Some technical choices
 
-```
-                    ┌──────────────────────────────┐
-   guest   ──────►  │  /g/{slug}   guest guide     │  public, no auth, mobile-first
-   (anonymous)      │  /s/{slug}   listing page    │  public, SEO, enquiry form
-                    └──────────────┬───────────────┘
-                                   │  GuideView (ip_hash) · LeadRequest
-                                   ▼
-                    ┌──────────────────────────────┐
-   host    ──────►  │  /dashboard  private area    │  Fortify + Policies
-   (auth)           │  properties · sections ·     │
-                    │  tips · photos · inbox       │
-                    └──────────────────────────────┘
-```
+### 1. Sitemap cache: a problem that surfaced in production
 
-Full-stack Laravel, no SPA. The dashboard runs on Livewire 4. The public page is plain Blade
-with a small amount of vanilla JavaScript — **it loads neither Livewire nor Alpine**, because
-it is the page that has to open fast on the mobile connection of a guest who has just arrived.
+`/sitemap.xml` worked correctly on the first request, while every subsequent one returned a 500.
 
-Details: **[docs/architettura.md](docs/architettura.md)** ·
-Decisions and trade-offs: **[docs/decisioni-tecniche.md](docs/decisioni-tecniche.md)** ·
-Everyday code: **[docs/crud-pattern.md](docs/crud-pattern.md)**
-*(all three in Italian)*
+The cause was a difference between the test and production environments: tests used the `array`
+cache driver, production used `database`.
 
----
+The controller was caching an Eloquent Collection directly. With the database driver the value
+is serialized, and on the next read it no longer behaved as expected.
 
-## Four things worth a look
-
-### 1. A bug that only existed in production, and why the test suite could not see it
-
-`/sitemap.xml` was returning a 500. Not always: **only after the first hit**. The first request
-worked, every request for the next hour did not.
-
-The cause was `Cache::remember` around an Eloquent Collection. Production runs
-`CACHE_STORE=database`, which round-trips the cached value through `serialize()` and
-`unserialize()`. On a cache miss the closure returns the real Collection, so you get a 200 and
-the defect stays hidden. On every subsequent hit the value comes back degraded into plain
-strings, and the view dies with `Attempt to read property slug on string`.
-
-The interesting part is **why 250 tests had not caught it**: `phpunit.xml` forces
-`CACHE_STORE=array`, which never serializes anything. The suite was structurally blind to this
-whole class of bug.
-
-The fix itself is trivial — cache primitives, not models. What I added afterwards matters more:
+The fix was to cache only the data actually needed, as a plain array:
 
 ```php
-/**
- * The cached value MUST be a plain array of primitives (not an Eloquent Collection
- * or Property models). Production's CACHE_STORE=database round-trips the value
- * through PHP serialize()/unserialize(); Eloquent models do not reliably survive
- * that round-trip on read, degrading into plain strings or incomplete objects and
- * causing a 500 on every warm-cache request.
- *
- * The cache key is versioned ('sitemap_v2'). The payload shape changed [...] Bumping
- * the key retires it instantly instead of requiring a cache flush at deploy time
- * (production has no PHP CLI, so `cache:clear` is not available over SSH).
- * Any future change to the shape of this payload must bump the key again.
- */
-public function index(): Response
-{
-    $properties = Cache::remember('sitemap_v2', 3600, fn () =>
-        Property::where('vetrina_enabled', true)
-            ->select(['slug', 'updated_at'])
-            ->get()
-            ->map(fn (Property $property) => [
-                'slug'       => $property->slug,
-                'updated_at' => $property->updated_at->toAtomString(),
-            ])
-            ->all()
-    );
-
-    return response()->view('sitemap', compact('properties'))
-        ->header('Content-Type', 'application/xml');
-}
+$properties = Cache::remember('sitemap_v2', 3600, fn () =>
+    Property::where('vetrina_enabled', true)
+        ->select(['slug', 'updated_at'])
+        ->get()
+        ->map(fn (Property $property) => [
+            'slug'       => $property->slug,
+            'updated_at' => $property->updated_at->toAtomString(),
+        ])
+        ->all()
+);
 ```
 
-Versioning the cache key is not tidiness. The hosting plan does not expose the PHP CLI over
-SSH, so running `cache:clear` on deploy is not an option. Bumping the key retires the stale
-entry on the first request instead and lets the old one die on its own TTL.
+After the fix I also added a dedicated test using the `database` driver, so that the production
+behaviour is reproduced in the suite.
 
-I also added a regression test that forces the `database` driver, so the suite stops being
-blind to it:
+The cache key is versioned because the production environment does not expose the PHP CLI over
+SSH. A change to the shape of the data can therefore move to a new key immediately, without
+requiring a `cache:clear`.
+
+### 2. Privacy and data handling
+
+Guests do not create an account and do not log in.
+
+The data collected is limited to what the guide and its statistics actually need. The IP address
+is not stored directly but hashed.
+
+For enquiries coming from the public listing page, the moment consent was given is also
+recorded.
+
+A retention command removes closed enquiries automatically once the defined period has passed.
+
+### 3. Protecting content with a PIN
+
+Some information, such as WiFi credentials or entry codes, can be protected with a PIN.
+
+The PIN is stored as a hash, and the unlocked state is kept in the guest's session.
+
+Rate limiting uses a key based on both IP and property, with a maximum of five attempts in ten
+minutes. Attempts made against one property therefore do not interfere with access to the
+others.
+
+Host access to their own properties is handled through Laravel Policies. Every method that
+writes to the database follows the same shape:
 
 ```php
-// tests/Feature/SitemapDatabaseCacheTest.php — both a cold and a warm hit must return 200
+$this->authorize('update', $this->property);
+$recommendation = $this->property->localRecommendations()->findOrFail($id);
 ```
 
-### 2. Privacy enforced in the schema, not in a policy document
+Authorization first, then loading through the already-scoped relation. An identifier belonging
+to another property is simply not found, with no need for additional checks. The details, with
+the relevant tests, are in [How a CRUD is written here](docs/crud-pattern.md).
 
-Guests are anonymous by construction. There is no `guests` table, no guest login, no tracking
-cookie. What remains is cut to the minimum at migration level:
+### 4. Normalising WhatsApp numbers
 
-```php
-// guide_views — guide analytics
-$table->string('event_type', 20);       // view | whatsapp_click | maps_click | pin_unlock
-$table->string('ip_hash', 64)->nullable();   // hashed, never the raw IP
-$table->string('user_agent')->nullable();
-
-// lead_requests — enquiries from the public listing page
-$table->timestamp('consent_given_at')->nullable();  // explicit consent, timestamped
-$table->string('ip_hash', 64)->nullable();
-```
-
-Retention is a command, not a promise:
+To build `wa.me` links correctly I isolated phone number normalisation in a small value object:
 
 ```php
-protected $signature = 'osply:prune-leads {--days=90 : Retention window in days}';
-
-// Deletes LeadRequests in terminal states (Lost / Archived) older than the retention
-// window. Leads in active states (New, Negotiating, Confirmed) are never touched.
-```
-
-### 3. The PIN, rate-limited per IP *and* per property
-
-Sensitive sections sit behind a per-property PIN, hashed, unlocked for the browser session.
-The rate limiter is keyed on IP **and** slug, so someone brute-forcing one property does not
-lock out legitimate guests of the others:
-
-```php
-// Rate limiting: IP + slug key, max 5 attempts in a 10-minute window
-$key = 'pin-unlock:' . sha1($request->ip() . '|' . $property->slug);
-
-if (RateLimiter::tooManyAttempts($key, 5)) {
-    $minutes = (int) ceil(RateLimiter::availableIn($key) / 60);
-    return back()->withErrors([
-        'pin' => "Troppi tentativi. Riprova tra {$minutes} {$label}.",
-    ]);
-}
-
-if (! Hash::check($request->input('pin'), $property->guest_pin_hash)) {
-    RateLimiter::hit($key, 600);
-    return back()->withErrors(['pin' => 'PIN errato. Riprova.']);
-}
-
-RateLimiter::clear($key);
-$request->session()->put('guide_unlocked_' . $property->id, true);
-```
-
-On the host side, authorization is a Laravel Policy with an admin bypass in `before()`. The
-tests cover the BOLA case explicitly: an owner trying to open someone else's property gets a
-403 at the Livewire component's `mount()`, before any data is read.
-
-### 4. A small, pure, tested value object
-
-Normalising an Italian phone number for a `wa.me/` link looks like a one-liner. It is not:
-`+39`, `0039`, `339 123 4567`, `0912345678`, spaces, dots, dashes. And above all you have to
-decide what happens when the number **cannot** be normalised.
-
-```php
-/**
- * Normalize a phone string to E.164 digits (no leading +) for wa.me/ links.
- *
- * Rules, applied in order:
- *   1. null / blank → null.
- *   2. International prefix recognised BEFORE stripping: if the string starts
- *      with '+' or '00', drop the prefix, strip non-digits, and use the digits
- *      as-is when >= 8 remain (no extra '39'); otherwise null.
- *   3. Otherwise strip non-digits: if the result starts with '3' and is 9–10
- *      digits long → prepend '39' (Italian mobile).
- *   4. Any other case (too short, not starting with 3, landline without prefix)
- *      → null (caller falls back to a "copy number" button).
- */
+// Returns the digits in E.164 form, or null when the number is ambiguous.
 public static function toE164(?string $raw): ?string
 ```
 
-Final class, static, no dependencies, with its own unit test. Rule 4 is the product decision:
-when a number is ambiguous the code does not guess a prefix, it degrades to a "copy number"
-button, which is always correct.
+It handles the most common formats and, when a number cannot be normalised with confidence, it
+avoids building a potentially wrong link and falls back to a safer alternative.
+
+The class is independent from the rest of the application and covered by unit tests.
 
 ---
 
 ## How it is tested
 
-250 Pest tests, mostly feature tests against observable behaviour.
+The suite has 250 Pest tests, mostly feature tests against application behaviour.
 
-| Area | What it checks |
-|---|---|
-| Authorization | an owner sees and edits only their own properties; BOLA on preview, sections, tips, inbox |
-| Public guide | only active content is rendered; protected sections leak nothing without the PIN |
-| PIN | correct PIN unlocks, wrong one does not, rate limit after 5 attempts |
-| Lead privacy | consent recorded, IP hashed, retention of terminal states |
-| Integrations | WhatsApp link built correctly, QR points at the right URL |
-| Regressions | the sitemap case above, with the cache driver forced |
+Covered, among others:
 
-Automated quality gates: **Pint** for code style and **Larastan** for static analysis, running
-on two GitHub Actions workflows on every push and pull request.
+* authorization and access to properties;
+* public and protected content;
+* PIN and rate limiting;
+* enquiry privacy;
+* WhatsApp links and QR codes;
+* regressions found while running in production.
 
----
-
-## What I deliberately left out
-
-v1 is not a PMS. No booking engine, no payments, no multi-language, no chatbot. Every proposed
-feature had to answer one question: *does this help a property create and share a clearer guest
-guide?* If the answer was no, it went to the backlog.
-
-That is the part of this project I am most pleased with. v1 was declared finished and closed
-against an acceptance checklist written **before** starting, with no "while I'm at it"
-additions. v1.1 — the public listing page and enquiry capture — came afterwards as a separate
-milestone, planned and closed the same way.
+Pint and Larastan also run automatically through GitHub Actions.
 
 ---
 
-## What I would do differently
+## Product choices
 
-- **The sitemap bug taught me something structural.** When the test environment diverges from
-  production on a driver — cache, sessions, queue, filesystem — that divergence is a blind
-  spot, not a configuration detail. I would now run at least one smoke test in CI against the
-  production drivers.
-- **Images** go through Intervention, but I am not yet serving a modern format automatically.
-  On a mobile-first page that is the next optimisation that actually moves the needle.
-- **The retention command exists but is not scheduled yet.** The logic is written and tested;
-  the cron entry in production is not there. I would rather say it here than have you find it
-  in an interview.
+The first version was deliberately limited to what was needed to create and share a guest guide.
+
+PMS, booking engine, payments, multi-language and chatbot were all left out of the first
+milestone.
+
+v1.1 later added the public listing page and enquiry handling, keeping the two development
+phases separate.
+
+---
+
+## What I would improve
+
+The sitemap problem showed how much it matters to reduce the differences between the test and
+production environments. I would add at least a few smoke tests to CI, running against the same
+drivers used in production.
+
+I would also improve automatic image format handling for the mobile page, and finish scheduling
+the retention command.
 
 ---
 
 ## License
 
-Proprietary material, published **for evaluation only**. Readable and quotable; not reusable,
-not redistributable, not deployable. See [LICENSE](LICENSE).
+The material in this repository is published for the purpose of technical evaluation.
 
-The code excerpts are illustrative fragments of a larger private codebase. They are here to be
-read, not reused.
+It may be read and quoted, but not reused, redistributed or deployed.
+
+See [LICENSE](LICENSE).
