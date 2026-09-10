@@ -54,6 +54,7 @@ Ho seguito direttamente progettazione, sviluppo, test e messa in produzione.
 * [Architettura](docs/architettura.md) — stack, modello dati, rotte, autorizzazione, deploy
 * [Decisioni tecniche](docs/decisioni-tecniche.md) — scelte, alternative valutate, un errore
 * [Come è scritto un CRUD](docs/crud-pattern.md) — il codice di tutti i giorni, con i test
+* [Estratti di codice](examples/) — sette file sorgente, tra cui una funzionalità completa dalla migrazione ai test
 
 ---
 

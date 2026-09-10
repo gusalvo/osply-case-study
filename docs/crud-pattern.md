@@ -10,6 +10,8 @@ componenti Livewire full-page con la stessa struttura.
 Questo documento apre `LocalRecommendationManager` (241 righe: CRUD completo, attivazione
 inline e riordino drag-and-drop) per mostrare lo schema che seguono tutte.
 
+I file sorgente citati qui sono consultabili in [`examples/`](../examples/).
+
 ---
 
 ## Autorizzazione e caricamento
@@ -179,7 +181,7 @@ Questo test copre invece un utente autorizzato sulla propria struttura che passa
 l'identificativo di un consiglio appartenente a un'altra:
 
 ```php
-test('non-owner cannot edit a recommendation on another owner\'s property', function () {
+test('non-owner cannot edit a recommendation on another owner\'s property (BOLA)', function () {
     $ownerA    = User::factory()->create(['role' => 'owner']);
     $ownerB    = User::factory()->create(['role' => 'owner']);
     $propertyA = Property::factory()->create(['user_id' => $ownerA->id]);

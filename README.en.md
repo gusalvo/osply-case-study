@@ -53,6 +53,7 @@ I handled design, development, testing and deployment directly.
 * [Architecture](docs/architettura.md) — stack, data model, routes, authorization, deployment
 * [Technical decisions](docs/decisioni-tecniche.md) — choices, alternatives considered, one mistake
 * [How a CRUD is written here](docs/crud-pattern.md) — everyday code, with its tests
+* [Code excerpts](examples/) — seven source files, including one feature from migration to tests
 
 *(the three documents are in Italian)*
 
